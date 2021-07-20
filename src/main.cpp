@@ -7,27 +7,10 @@
 #include <vector>
 #include <stdint.h>
 #include <algorithm>
+#include <map>
 #include "C:\Users\Christian Helgeson\Desktop\Development\Game Development\ChiliTomatoNoodle Projects\DirectX 3D 11 Practice\DirectX with SDL\include\Vec2.h"
 #include "C:\Users\Christian Helgeson\Desktop\Development\Game Development\ChiliTomatoNoodle Projects\DirectX 3D 11 Practice\DirectX with SDL\include\types.h"
 #include "C:\Users\Christian Helgeson\Desktop\Development\Game Development\ChiliTomatoNoodle Projects\DirectX 3D 11 Practice\DirectX with SDL\include\control.h"
-
-
-#if HANDMADE_SLOW
-// TODO(casey): Complete assertion macro - don't worry everyone!
-#define Assert(Expression) if(!(Expression)) {*(int *)0 = 0;}
-#else
-#define Assert(Expression)
-#endif
-
-#define MAX_PLAYERS 2
-#define Kilobytes(Value) ((Value)*1024LL)
-#define Megabytes(Value) (Kilobytes(Value) *1024LL)
-#define Gigabytes(Value) (Megabytes(Value) *1024LL)
-
-#define ArrayCount(Array) (sizeof(Array) / sizeof((Array)[0]))
-
-SDL_GameController *game_controllers[MAX_PLAYERS];
-SDL_Haptic *rumblers[MAX_PLAYERS];
 
 const int SCREEN_WIDTH = 1280;
 const int SCREEN_HEIGHT = 720;
@@ -40,16 +23,29 @@ static int num_players = 0;
 
 static Vec2 mouse_pos;
 
+const static uint8_t *keystate;
 
 
-static void SDLProcessKeyPress(game_button_state *state, bool down) {
+
+/*static void SDLProcessKeyPress(game_button_state *state, bool down) {
 	Assert(state->ended_down != down);
 	state->ended_down = down;
 	++state->half_transition_count;
+} */
+
+
+bool isKeyDown(SDL_Scancode pScan) {
+    if (keystate != 0) {
+        if (keystate[pScan] == 1) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+    return false;
 }
 
-
-bool HandleEvent(SDL_Event *Event, game_controller_input *NewKeyboardController)
+bool HandleEvent(SDL_Event *Event)// game_controller_input *NewKeyboardController)
 {
     bool ShouldQuit = false;
  
@@ -64,6 +60,10 @@ bool HandleEvent(SDL_Event *Event, game_controller_input *NewKeyboardController)
         case SDL_KEYDOWN:
         case SDL_KEYUP:
         {
+            keystate = SDL_GetKeyboardState(0);
+            if (isKeyDown(SDL_SCANCODE_ESCAPE)) {
+                ShouldQuit = true;
+            }
             SDL_Keycode KeyCode = Event->key.keysym.sym;
             bool IsDown = (Event->key.state == SDL_PRESSED);
             bool WasDown = false;
@@ -74,69 +74,6 @@ bool HandleEvent(SDL_Event *Event, game_controller_input *NewKeyboardController)
             else if (Event->key.repeat != 0)
             {
                 WasDown = true;
-            }
-            
-            // NOTE: In the windows version, we used "if (IsDown != WasDown)"
-            // to detect key repeats. SDL has the 'repeat' value, though,
-            // which we'll use.
-            if (Event->key.repeat == 0)
-            {
-                if(KeyCode == SDLK_w)
-                {
-                    SDLProcessKeyPress(&NewKeyboardController->MoveUp, IsDown);
-                }
-                else if(KeyCode == SDLK_a)
-                {
-                    SDLProcessKeyPress(&NewKeyboardController->MoveLeft, IsDown);
-                }
-                else if(KeyCode == SDLK_s)
-                {
-                    SDLProcessKeyPress(&NewKeyboardController->MoveDown, IsDown);
-                }
-                else if(KeyCode == SDLK_d)
-                {
-                    SDLProcessKeyPress(&NewKeyboardController->MoveRight, IsDown);
-                }
-                else if(KeyCode == SDLK_q)
-                {
-                    SDLProcessKeyPress(&NewKeyboardController->LeftShoulder, IsDown);
-                }
-                else if(KeyCode == SDLK_e)
-                {
-                    SDLProcessKeyPress(&NewKeyboardController->RightShoulder, IsDown);
-                }
-                else if(KeyCode == SDLK_UP)
-                {
-                    SDLProcessKeyPress(&NewKeyboardController->ActionUp, IsDown);
-                }
-                else if(KeyCode == SDLK_LEFT)
-                {
-                    SDLProcessKeyPress(&NewKeyboardController->ActionLeft, IsDown);
-                }
-                else if(KeyCode == SDLK_DOWN)
-                {
-                    SDLProcessKeyPress(&NewKeyboardController->ActionDown, IsDown);
-                }
-                else if(KeyCode == SDLK_RIGHT)
-                {
-                    SDLProcessKeyPress(&NewKeyboardController->ActionRight, IsDown);
-                }
-                else if(KeyCode == SDLK_ESCAPE)
-                {
-                    printf("ESCAPE: ");
-                    if(IsDown)
-                    {
-                        printf("IsDown ");
-                    }
-                    if(WasDown)
-                    {
-                        printf("WasDown");
-                    }
-                    printf("\n");
-                }
-                else if(KeyCode == SDLK_SPACE)
-                {
-                }
             }
 
             bool AltKeyWasDown = (Event->key.keysym.mod & KMOD_ALT);
@@ -180,83 +117,6 @@ bool HandleEvent(SDL_Event *Event, game_controller_input *NewKeyboardController)
 }
 
 
-
-static void SDLOpenControllers() {
-	//Game Controller API exists within the joystick API. As such we need to
-	//loop through the joysticks and select only those that are controllers.
-	int num_joysticks = SDL_NumJoysticks();
-	int control_index = 0;
-	for (int joystick_index = 0; joystick_index < num_joysticks; ++joystick_index) {
-		if (!SDL_IsGameController(joystick_index)) {
-			//not a controller, so return to loop beginning to find another.
-			continue;
-		}
-
-		if (control_index >= MAX_PLAYERS) {
-			//leave the loop as we have found enough controllers
-			break;
-		}
-
-		//If there are yet more controllers, open joystick as controller.
-		//Then increment controller index
-		game_controllers[control_index] = 
-			SDL_GameControllerOpen(joystick_index);
-		//We need to get an sdl_joystick handle from the controller to
-		//initialize rumble
-		SDL_Joystick *joystick_handle = 
-			SDL_GameControllerGetJoystick(game_controllers[control_index]);
-		rumblers[control_index] = 
-			SDL_HapticOpenFromJoystick(joystick_handle);
-		num_players++;
-		control_index++;
-	}
- 
-}
-
-
-static void SDLCloseControllers() {
-	for (int i = 0; i < MAX_PLAYERS; ++i) {
-		if (game_controllers[i]) {
-			if (rumblers[i]) {
-				SDL_HapticClose(rumblers[i]);
-			}
-			SDL_GameControllerClose(game_controllers[i]);
-		}
-	}
-}
-
-static void SDLOpenController(int32_t joystick) {
-	if (!SDL_IsGameController(joystick)) {
-		return;
-	}
-
-	if (num_players >= MAX_PLAYERS) {
-		return;
-	}
-
-	game_controllers[num_players] = 
-		SDL_GameControllerOpen(joystick);
-	SDL_Joystick *joystick_handle = 
-		SDL_GameControllerGetJoystick(game_controllers[num_players]);
-	rumblers[num_players] = 
-		SDL_HapticOpenFromJoystick(joystick_handle);
-	num_players++;
-}
-
-static void SDLCloseController(int32_t joystick) {
-	//TODO: Decide if you would like to happen if player one leaves
-	//Will player two slide into player one position? Define that behavior.
-	if (joystick < 0 || joystick >= MAX_PLAYERS) {
-		return;
-	}
-	if(game_controllers[joystick]) {
-		if (rumblers[joystick]) {
-			SDL_HapticClose(rumblers[joystick]);
-		}
-		SDL_GameControllerClose(game_controllers[joystick]);
-	}
-}
-
 //This function will allows us to determine the ideal monitor
 //display mode for our frame rate, as certain frame rates are only
 //supported at certain resolutions
@@ -277,31 +137,41 @@ static int SDLGetWindowRefreshRate(SDL_Window *window) {
 }
 
 
+/*!
+ * Returns the window dimensions of an SDL_Window
+ * @param       *window     An SDL_Window struct
+ * @result      A struct holding the window dimensions
+ * 
+ */
 sdl_window_dimension SDLGetWindowDimensions(SDL_Window *window) {
 	sdl_window_dimension result;
 	SDL_GetWindowSize(window, &result.w, &result.h);
 	return result;
 }
 
+bool Load_Texture(std::map<std::string, SDL_Texture*> *map, 
+    std::string file, SDL_Renderer *graphics, std::string id) {
 
-inline game_controller_input *GetController(game_input *input, int unsigned index) {
-	Assert(index < ArrayCount(input->Controllers)); 
-
-	game_controller_input *result = &input->Controllers[index];
-	return result;
-}
-
-static void
-SDLProcessGameControllerButton(game_button_state *OldState,
-                               game_button_state *NewState,
-                               bool Value)
-{
-    NewState->ended_down = Value;
-    NewState->half_transition_count += ((NewState->ended_down == OldState->ended_down)?0:1);
-}
-
+    SDL_Surface *temp_surface = IMG_Load(file.c_str());
+    if (temp_surface == 0) {
+        return false;
+    } 
+    SDL_Texture *texture;
+    SDL_CreateTextureFromSurface(graphics, temp_surface);
+    SDL_FreeSurface(temp_surface);
+    if (texture != 0) {
+        map->emplace(id, texture);
+        return true;
+    } else {
+        return false;
+    }
+} 
 
 
+
+/*!
+ * @function
+*/
 void Draw_Sprite(SDL_Rect *source_rect, SDL_Rect *dest_rect, int scale, int end_frame, int ms_per_frame) {
     source_rect->x = source_rect->w * int(((SDL_GetTicks() / ms_per_frame) % end_frame));
     dest_rect->x = 0;
@@ -311,9 +181,18 @@ void Draw_Sprite(SDL_Rect *source_rect, SDL_Rect *dest_rect, int scale, int end_
 }
 
 
+
+/*!
+ * Draws a Line to the screen
+ * @param   graphics    A pointer to the SDL Renderer
+ * @param   start       A 2D Vector that begins the line
+ * @param   end         A 2D Vector that ends the line
+ *     
+*/
 void Draw_Line(SDL_Renderer *graphics, Vec2 start, Vec2 end) {
     SDL_RenderDrawLine(graphics, start.x, start.y, end.x, end.y);
 }
+
 
 
 
@@ -328,10 +207,6 @@ int main(int argc, char ** argv)
 		printf("SDL Initialization Failed: SDL_Error %s\n", SDL_GetError());
 		return -1;
 	}
-	//this variable attempts to give an accurate impression of real world time
-	uint64_t perf_frequency = 
-		SDL_GetPerformanceFrequency();
-	SDLOpenControllers();
     SDL_Window * window = SDL_CreateWindow("SDL2 line drawing",
         SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 
 		SCREEN_WIDTH, SCREEN_HEIGHT, 0);
@@ -340,6 +215,10 @@ int main(int argc, char ** argv)
 		SDL_Quit();
 		return -1;
 	}
+
+    //this variable attempts to give an accurate impression of real world time
+	uint64_t perf_frequency = 
+		SDL_GetPerformanceFrequency();
 
     SDL_Renderer * graphics = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 	if (graphics == NULL) {
@@ -356,34 +235,33 @@ int main(int argc, char ** argv)
 
 	sdl_window_dimension win_dimensions = SDLGetWindowDimensions(window);
 
-	game_input input[2] = {};
-	game_input *new_input = &input[0];
-	game_input *old_input = &input[1];
-
-	void *base_address = (void*)(0);
-
 	uint64_t last_counter = SDL_GetPerformanceCounter();
 	uint64_t last_cycle_count = _rdtsc();
-
 	//contains a collection of pixels
-	SDL_Surface *temp_surface = IMG_Load("res/sPlayerRun_strip32.png");
+    std::map<std::string, SDL_Texture*> texture_map;
+    bool success = Load_Texture(&texture_map, "res/sPlayerRun_strip32.png", graphics, "run");
+	/*SDL_Surface *temp_surface = IMG_Load("res/sPlayerRun_strip32.png");
 
 	//Driver specific collection of pixel data?
 	//TODO: Error checks for unsuccessful texture creation
-	SDL_Texture *player_texture = SDL_CreateTextureFromSurface(graphics, temp_surface);
+	SDL_Texture *player_texture = SDL_CreateTextureFromSurface(graphics, temp_surface); */
 	SDL_Rect source_rect;
 	SDL_Rect dest_rect;
     source_rect.w = 17;
     source_rect.h = 32;
-    
-	SDL_FreeSurface(temp_surface);
-	
 
+    int velocity = 2;
+    int position = 0;
+
+
+    
+	//SDL_FreeSurface(temp_surface);
+	
     while (running)
     {
 		SDL_Event event;
         while(SDL_PollEvent(&event)) {
-			if (HandleEvent(&event, NewKeyboardController)) {
+			if (HandleEvent(&event)) {  
 				running = false;
 			}
 		}
@@ -391,18 +269,23 @@ int main(int argc, char ** argv)
         SDL_SetRenderDrawColor(graphics, 0, 0, 0, 255);
         SDL_RenderClear(graphics);
 
-
         SDL_SetRenderDrawColor(graphics, 255, 255, 255, 255);
         Vec2 v;
-        v.x = 100; 
+        Vec2 zeta;
+        v.x = 100;
         v.y = 100;
+        if (isKeyDown(SDL_SCANCODE_RIGHT)) {
+            velocity = 2;
+        } else {
+            velocity = 0;
+        }
         Draw_Line(graphics, v, mouse_pos);
 
 
 		//SDL_SetRenderDrawColor(graphics, 0, 255, 255, 255);
         Draw_Sprite(&source_rect, &dest_rect, 4, 32, 80);
 
-        SDL_RenderCopyEx(graphics, player_texture, &source_rect, &dest_rect, 30, 0, SDL_FLIP_VERTICAL);
+        SDL_RenderCopyEx(graphics, map["run"], &source_rect, &dest_rect, 0, 0, SDL_FLIP_VERTICAL);
 
         // render window
  
@@ -410,10 +293,13 @@ int main(int argc, char ** argv)
     }
  
     // cleanup SDL
-
-	SDLCloseControllers();
-
-	SDL_DestroyTexture(player_texture);
+    std::map<std::string, int>::iterator it = texture_map.begin();
+    while (it != texture_map.end()) {
+        SDL_DestroyTexture(it->second);
+    }
+    while (!texture_map.empty()) {
+        texture_map.clear();
+    }
  
     SDL_DestroyRenderer(graphics);
     SDL_DestroyWindow(window);
@@ -421,5 +307,7 @@ int main(int argc, char ** argv)
  
     return 0;
 }
+
+
 
 

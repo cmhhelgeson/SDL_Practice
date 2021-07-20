@@ -1,4 +1,3 @@
-#pragma once
 
 float NormalizeInputToDeadzone(int16_t val, int16_t threshold) {
 	float normalized = 0;
