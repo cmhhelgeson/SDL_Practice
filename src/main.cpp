@@ -7,8 +7,10 @@
 #include <vector>
 #include <stdint.h>
 #include <algorithm>
-#include <math.h>
-#include "vec.h"
+#include "C:\Users\Christian Helgeson\Desktop\Development\Game Development\ChiliTomatoNoodle Projects\DirectX 3D 11 Practice\DirectX with SDL\include\Vec2.h"
+#include "C:\Users\Christian Helgeson\Desktop\Development\Game Development\ChiliTomatoNoodle Projects\DirectX 3D 11 Practice\DirectX with SDL\include\types.h"
+#include "C:\Users\Christian Helgeson\Desktop\Development\Game Development\ChiliTomatoNoodle Projects\DirectX 3D 11 Practice\DirectX with SDL\include\control.h"
+
 
 #if HANDMADE_SLOW
 // TODO(casey): Complete assertion macro - don't worry everyone!
@@ -36,90 +38,9 @@ const bool windows_flag = true;
 static bool running = true;
 static int num_players = 0;
 
-class Triangle {
-public: 
-	Triangle() = default;
-	Triangle(v2f _pos, v2f _v1, v2f _v2, v2f _v3) : 
-		pos(_pos), v1(_v1), v2(_v2), v3(_v3) {}
-public:
-	v2f pos;
-	v2f v1;
-	v2f v2;
-	v2f v3;
-};
-
-struct game_button_state {
-	int half_transition_count;
-	bool ended_down;
-};
-
-struct game_controller_input
-{
-    bool IsConnected;
-    bool IsAnalog;    
-    float StickAverageX;
-    float StickAverageY;
-    
-    union
-    {
-        game_button_state Buttons[12];
-        struct
-        {
-            game_button_state MoveUp;
-            game_button_state MoveDown;
-            game_button_state MoveLeft;
-            game_button_state MoveRight;
-            
-            game_button_state ActionUp;
-            game_button_state ActionDown;
-            game_button_state ActionLeft;
-            game_button_state ActionRight;
-            
-            game_button_state LeftShoulder;
-            game_button_state RightShoulder;
-
-            game_button_state Back;
-            game_button_state Start;
-
-            // NOTE(casey): All buttons must be added above this line
-            
-            game_button_state Terminator;
-        };
-    };
-};
-
-struct game_input
-{
-    // TODO(casey): Insert clock values here.    
-    game_controller_input Controllers[3];
-};
+static Vec2 mouse_pos;
 
 
-struct sdl_window_dimension {
-	int w;
-	int h;
-};
-
-
-
-/*static void
-SDLUpdateWindow(SDL_Window *Window, SDL_Renderer *Renderer, sdl_graphics_buffer *Buffer)
-{
-	//Updates the texture of the screen with new data
-    SDL_UpdateTexture(Buffer->texture,
-                      0,
-                      Buffer->mem,
-                      Buffer->pitch);
-
-	//copies texture to current render target
-    SDL_RenderCopy(Renderer,
-                   Buffer->texture,
-                   0,
-                   0);
-
-	//Presents the graphics to the screen
-    SDL_RenderPresent(Renderer);
-} */
 
 static void SDLProcessKeyPress(game_button_state *state, bool down) {
 	Assert(state->ended_down != down);
@@ -249,22 +170,16 @@ bool HandleEvent(SDL_Event *Event, game_controller_input *NewKeyboardController)
                 } break;
             }
         } break;
+        case SDL_MOUSEMOTION: {
+            mouse_pos.x = Event->motion.x;
+            mouse_pos.y = Event->motion.y;
+        }
     }
     
     return(ShouldQuit);
 }
 
-static float NormalizeInputToDeadzone(int16_t val, int16_t threshold) {
-	float normalized = 0;
 
-	if (val < threshold) {
-		normalized = (float)(val + threshold) / (32768.0f - threshold); 
-	} else if (val > threshold) {
-		normalized = (float)(val - threshold) / (32768.0f - threshold); 
-	}
-
-	return normalized;
-}
 
 static void SDLOpenControllers() {
 	//Game Controller API exists within the joystick API. As such we need to
@@ -385,16 +300,7 @@ SDLProcessGameControllerButton(game_button_state *OldState,
     NewState->half_transition_count += ((NewState->ended_down == OldState->ended_down)?0:1);
 }
 
-static float SDLProcessGameControllerAxisValue(int16_t Value, int16_t DeadZoneThreshold) {
-	float result = 0;
-	if(Value < -DeadZoneThreshold) {
-        result = (float)((Value + DeadZoneThreshold) / (32768.0f - DeadZoneThreshold));
-    } else if(Value > DeadZoneThreshold) {
-        result = (float)((Value - DeadZoneThreshold) / (32767.0f - DeadZoneThreshold));
-    }
 
-    return(result);
-}
 
 void Draw_Sprite(SDL_Rect *source_rect, SDL_Rect *dest_rect, int scale, int end_frame, int ms_per_frame) {
     source_rect->x = source_rect->w * int(((SDL_GetTicks() / ms_per_frame) % end_frame));
@@ -404,26 +310,17 @@ void Draw_Sprite(SDL_Rect *source_rect, SDL_Rect *dest_rect, int scale, int end_
 	dest_rect->h = source_rect->h * scale;
 }
 
-/*void Draw_Triangle(SDL_Renderer *graphics, Triangle tri, float r = 0.0f) {
-	tri.v1.x = tri.v1.x * cosf(r) - tri.v1.y * sinf(r);
-	tri.v1. y= tri.v1.x * sinf(r) + tri.v1.y * cosf(r);
 
-	tri.v2.x = tri.v2.x * cosf(r) - tri.v2.y * sinf(r);
-	tri.v2.y= tri.v2.x * sinf(r) + tri.v2.y * cosf(r);
+void Draw_Line(SDL_Renderer *graphics, Vec2 start, Vec2 end) {
+    SDL_RenderDrawLine(graphics, start.x, start.y, end.x, end.y);
+}
 
-	tri.v3.x = tri.v3.x * cosf(r) - tri.v3.y * sinf(r);
-	tri.v3.y= tri.v3.x * sinf(r) + tri.v3.y * cosf(r);
-	
-	v2i one = {tri.pos.x  + tri.v1.x, tri.pos.y + tri.v1.y};
-	v2i two = {tri.pos.x  + tri.v2.x, tri.pos.y + tri.v2.y};
-	v2i three = {tri.pos.x  + tri.v3.x, tri.pos.y + tri.v3.y};
-	SDL_RenderDrawLine(graphics, one.x, one.y, two.x, two.y);
-	SDL_RenderDrawLine(graphics, one.x, one.y, three.x, three.y);
-	SDL_RenderDrawLine(graphics, two.x, two.y, three.x, three.y);
-} */
+
+
 
 int main(int argc, char ** argv)
 {
+    //BEGIN SETUP
     if (SDL_Init(SDL_INIT_VIDEO | 
 		SDL_INIT_GAMECONTROLLER | 
 		SDL_INIT_HAPTIC | 
@@ -455,34 +352,15 @@ int main(int argc, char ** argv)
 	printf("The monitor's refresh rate is %d Hz \n", 
 		SDLGetWindowRefreshRate(window));
 	int target_fps = 60;
-	/* if (SDLGetWindowRefreshRate(window) >= 120) {
-		target_fps = 120;
-	} */
 	float frame_budget = 1.0f / 60.0f;
 
-	//Get the dimensions of the window and resize the back buffer to 
-	//correspond to the dimensions of the window, at least at the beginning
-	//of the program
 	sdl_window_dimension win_dimensions = SDLGetWindowDimensions(window);
-	//SDLResizeTexture(&back_buffer, graphics, win_dimensions.w, win_dimensions.h);
 
 	game_input input[2] = {};
 	game_input *new_input = &input[0];
 	game_input *old_input = &input[1];
 
 	void *base_address = (void*)(0);
-
-	/*game_memory gamemem;
-	gamemem.permanent_storage_size = Megabytes(64);
-	gamemem.transient_storage_size = Gigabytes(4);
-
-	uint64_t total_storage = gamemem.permanent_storage_size +
-		gamemem.transient_storage_size;
-
-	gamemem.permanent_storage = VirtualAlloc(base_address, total_storage,
-		MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE); 
-
-	gamemem.transient_storage = (uint8*)(gamemem.permanent_storage) + gamemem.permanent_storage_size; */
 
 	uint64_t last_counter = SDL_GetPerformanceCounter();
 	uint64_t last_cycle_count = _rdtsc();
@@ -498,148 +376,34 @@ int main(int argc, char ** argv)
     source_rect.w = 17;
     source_rect.h = 32;
     
-	//SDL_QueryTexture(player_texture, NULL, NULL, &source_rect.w, &source_rect.h);
-	//frees temp surface used to make texture
 	SDL_FreeSurface(temp_surface);
 	
 
     while (running)
     {
-		//Set up Keyboards at index 0 of both new and old inputs
-		game_controller_input *OldKeyboardController = GetController(old_input,0);
-        game_controller_input *NewKeyboardController = GetController(new_input,0);
-        *NewKeyboardController = {};
-
-		for(int ButtonIndex = 0;
-        	ButtonIndex < ArrayCount(NewKeyboardController->Buttons);
-            ++ButtonIndex) {
-            	NewKeyboardController->Buttons[ButtonIndex].ended_down =
-                OldKeyboardController->Buttons[ButtonIndex].ended_down;
-        }
 		SDL_Event event;
         while(SDL_PollEvent(&event)) {
 			if (HandleEvent(&event, NewKeyboardController)) {
 				running = false;
 			}
 		}
-		//Handles input: think about putting in a different function
-		for (int i = 0; i < MAX_PLAYERS; ++i) {
-			if (game_controllers[i] != 0 && 
-				SDL_GameControllerGetAttached(game_controllers[i])) {
-					game_controller_input *OldController = GetController(old_input,i+1);
-                    game_controller_input *NewController = GetController(new_input,i+1);
-					NewController->IsConnected = true;
-                    
-                //TODO: Do something with the DPad, Start and Selected?
-                bool Up = SDL_GameControllerGetButton(game_controllers[i], SDL_CONTROLLER_BUTTON_DPAD_UP);
-                bool Down = SDL_GameControllerGetButton(game_controllers[i], SDL_CONTROLLER_BUTTON_DPAD_DOWN);
-                bool Left = SDL_GameControllerGetButton(game_controllers[i], SDL_CONTROLLER_BUTTON_DPAD_LEFT);
-                bool Right = SDL_GameControllerGetButton(game_controllers[i], SDL_CONTROLLER_BUTTON_DPAD_RIGHT);
-                bool Start = SDL_GameControllerGetButton(game_controllers[i], SDL_CONTROLLER_BUTTON_START);
-                bool Back = SDL_GameControllerGetButton(game_controllers[i], SDL_CONTROLLER_BUTTON_BACK);
-
-				SDLProcessGameControllerButton(&(OldController->LeftShoulder),
-                    	&(NewController->LeftShoulder), SDL_GameControllerGetButton(game_controllers[i], 
-						SDL_CONTROLLER_BUTTON_LEFTSHOULDER));
-
-                SDLProcessGameControllerButton(&(OldController->RightShoulder),
-                               &(NewController->RightShoulder),
-                               SDL_GameControllerGetButton(game_controllers[i], SDL_CONTROLLER_BUTTON_RIGHTSHOULDER));
-
-                SDLProcessGameControllerButton(&(OldController->ActionDown),
-                               &(NewController->ActionDown),
-                               SDL_GameControllerGetButton(game_controllers[i], SDL_CONTROLLER_BUTTON_A));
-
-                SDLProcessGameControllerButton(&(OldController->ActionRight),
-                               &(NewController->ActionRight),
-                               SDL_GameControllerGetButton(game_controllers[i], SDL_CONTROLLER_BUTTON_B));
-
-                SDLProcessGameControllerButton(&(OldController->ActionLeft),
-                               &(NewController->ActionLeft),
-                               SDL_GameControllerGetButton(game_controllers[i], SDL_CONTROLLER_BUTTON_X));
-
-                SDLProcessGameControllerButton(&(OldController->ActionUp),
-                               &(NewController->ActionUp),
-                               SDL_GameControllerGetButton(game_controllers[i], SDL_CONTROLLER_BUTTON_Y));
-							   
-				NewController->StickAverageX = 
-					SDLProcessGameControllerAxisValue(SDL_GameControllerGetAxis(game_controllers[i], SDL_CONTROLLER_AXIS_LEFTX), 1);
-                NewController->StickAverageY = 
-					-SDLProcessGameControllerAxisValue(SDL_GameControllerGetAxis(game_controllers[i], SDL_CONTROLLER_AXIS_LEFTY), 1);
-				if((NewController->StickAverageX != 0.0f) || (NewController->StickAverageY != 0.0f)) {
-                	 NewController->IsAnalog = true;
-                }
-
-                if(SDL_GameControllerGetButton(game_controllers[i], SDL_CONTROLLER_BUTTON_DPAD_UP))
-                {
-                	NewController->StickAverageY = 1.0f;
-                    NewController->IsAnalog = false;
-                }
-                        
-                if(SDL_GameControllerGetButton(game_controllers[i], SDL_CONTROLLER_BUTTON_DPAD_DOWN))
-                {
-                    NewController->StickAverageY = -1.0f;
-                    NewController->IsAnalog = false;
-                }
-                        
-                if(SDL_GameControllerGetButton(game_controllers[i], SDL_CONTROLLER_BUTTON_DPAD_LEFT))
-				{
-                	NewController->StickAverageX = -1.0f;
-                    NewController->IsAnalog = false;
-                }
-                        
-                if(SDL_GameControllerGetButton(game_controllers[i], SDL_CONTROLLER_BUTTON_DPAD_RIGHT))
-                {
-                	NewController->StickAverageX = 1.0f;
-                    NewController->IsAnalog = false;
-                }
-
-                float Threshold = 0.5f;
-                SDLProcessGameControllerButton(&(OldController->MoveLeft),
-                                                       &(NewController->MoveLeft),
-                                                       NewController->StickAverageX < -Threshold);
-                SDLProcessGameControllerButton(&(OldController->MoveRight),
-                                                       &(NewController->MoveRight),
-                                                       NewController->StickAverageX > Threshold);
-                SDLProcessGameControllerButton(&(OldController->MoveUp),
-                                                       &(NewController->MoveUp),
-                                                       NewController->StickAverageY < -Threshold);
-                SDLProcessGameControllerButton(&(OldController->MoveDown),
-                                                       &(NewController->MoveDown),
-                                                       NewController->StickAverageY > Threshold);
-			}
-		}
-
-		/*sdl_graphics_buffer current_buffer = {};
-		current_buffer.mem = back_buffer.mem;
-		current_buffer.width = back_buffer.width;
-		current_buffer.height = back_buffer.height;
-		current_buffer.pitch = back_buffer.pitch;
-        */
 		
-
-		/*v2f vert_1_transform = 
-			{vert_1.x * cosf(angle) - vert_1.y * sinf(angle),
-		 	vert_1.x * sinf(angle) + vert_1.y * cosf(angle)};
-		v2f vert_2_transform = 
-			{vert_2.x * cosf(angle) - vert_2.y * sinf(angle),
-		 	vert_2.x * sinf(angle) + vert_2.y * cosf(angle)};
-		v2f vert_3_transform = 
-			{vert_3.x * cosf(angle) - vert_3.y * sinf(angle),
-		 	vert_3.x * sinf(angle) + vert_3.y * cosf(angle)};
-		v2i v1 = {(int)vert_1_transform.x, (int) vert_2_transform.y};
-		v2i v2 = {(int)vert_2_transform.x, (int) vert_2_transform.y};
-		v2i v3 = {(int)vert_3_transform.x, (int) vert_3_transform.y}; */
- 
-        SDL_SetRenderDrawColor(graphics, 242, 242, 242, 255);
+        SDL_SetRenderDrawColor(graphics, 0, 0, 0, 255);
         SDL_RenderClear(graphics);
 
 
-		SDL_SetRenderDrawColor(graphics, 0, 0, 0, 255);
+        SDL_SetRenderDrawColor(graphics, 255, 255, 255, 255);
+        Vec2 v;
+        v.x = 100; 
+        v.y = 100;
+        Draw_Line(graphics, v, mouse_pos);
+
+
+		//SDL_SetRenderDrawColor(graphics, 0, 255, 255, 255);
         Draw_Sprite(&source_rect, &dest_rect, 4, 32, 80);
 
-		SDL_RenderCopy(graphics, player_texture, &source_rect, &dest_rect);
- 
+        SDL_RenderCopyEx(graphics, player_texture, &source_rect, &dest_rect, 30, 0, SDL_FLIP_VERTICAL);
+
         // render window
  
         SDL_RenderPresent(graphics);
