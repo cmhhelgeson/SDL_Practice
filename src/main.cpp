@@ -25,6 +25,8 @@ static Vec2 mouse_pos;
 
 const static uint8_t *keystate;
 
+//Args
+
 
 
 /*static void SDLProcessKeyPress(game_button_state *state, bool down) {
