@@ -21,7 +21,7 @@ const bool windows_flag = true;
 static bool running = true;
 static int num_players = 0;
 
-static Vec2 mouse_pos; ///////
+static Vec2 mouse_pos; 
 
 const static uint8_t *keystate;
 
@@ -304,6 +304,8 @@ int main(int argc, char ** argv)
     SDL_DestroyRenderer(graphics);
     SDL_DestroyWindow(window);
     SDL_Quit();
+	
+	//Fun in the sun
  
     return 0;
 }
