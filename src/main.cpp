@@ -15,6 +15,8 @@
 const int SCREEN_WIDTH = 1281;
 const int SCREEN_HEIGHT = 640;
 
+//ugh
+
 const bool linux_flag = false;
 const bool windows_flag = true;
 
