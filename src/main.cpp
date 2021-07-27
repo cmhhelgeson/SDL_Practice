@@ -21,7 +21,7 @@ const bool windows_flag = true;
 static bool running = true;
 static int num_players = 0;
 
-static Vec2 mouse_pos;
+static Vec2 mouse_pos; ///////
 
 const static uint8_t *keystate;
 
