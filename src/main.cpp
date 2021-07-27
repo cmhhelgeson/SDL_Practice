@@ -12,7 +12,7 @@
 #include "C:\Users\Christian Helgeson\Desktop\Development\Game Development\ChiliTomatoNoodle Projects\DirectX 3D 11 Practice\DirectX with SDL\include\types.h"
 #include "C:\Users\Christian Helgeson\Desktop\Development\Game Development\ChiliTomatoNoodle Projects\DirectX 3D 11 Practice\DirectX with SDL\include\control.h"
 
-const int SCREEN_WIDTH = 1280;
+const int SCREEN_WIDTH = 1281;
 const int SCREEN_HEIGHT = 640;
 
 const bool linux_flag = false;
